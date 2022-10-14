@@ -55,7 +55,8 @@ if __name__ == '__main__':
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=client_id,
                                                    client_secret=client_secret,
                                                    redirect_uri=SPOTIPY_REDIRECT_URI))
-    albums = sp.current_user_saved_albums()
+    saved_albums = sp.current_user_saved_albums()
+    saved_tracks = sp.current_user_saved_tracks()
     index = 0
     counter = 0
 
@@ -66,10 +67,10 @@ if __name__ == '__main__':
     print("Enter:\n"
           "1 To select a playlist from your account\n"
           "2 to create a new name")
-    choice=""
-    while(not choice.isdecimal()):
-        choice=input(">")
-    if choice=="1":
+    choice = ""
+    while not choice.isdecimal():
+        choice = input(">")
+    if choice == "1":
         playlistName = choose_playlist()
     if choice == "2":
         playlistName = input("New playlist name:>")
@@ -78,9 +79,9 @@ if __name__ == '__main__':
     all_playlist = find_playlist_by_name(playlistName)
     if all_playlist is None:
         exit("Could not create/find a playlist")
-    while albums:
+    while saved_albums:
         uris: list = []
-        for i, album in enumerate(albums['items']):
+        for i, album in enumerate(saved_albums['items']):
             tracks = sp.album_tracks(album['album']['id'])
             while (tracks):
                 for track in tracks['items']:
@@ -108,8 +109,8 @@ if __name__ == '__main__':
                         exit("Failure at creating finding new playlist")
                 else:
                     exit("Unexpected exception")
-        if albums['next']:
-            albums = sp.next(albums)
+        if saved_albums['next']:
+            saved_albums = sp.next(saved_albums)
         else:
-            albums = None
+            saved_albums = None
     print("Number of songs ", counter)
