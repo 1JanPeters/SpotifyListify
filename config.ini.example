@@ -1,0 +1,6 @@
+[credentials]
+userid=123456789abcdef
+client_id=123456789abcdef
+client_secret=123456789abcdef
+[network]
+SPOTIPY_REDIRECT_URI = http://127.0.0.1:8080
