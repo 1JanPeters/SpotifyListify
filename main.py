@@ -7,6 +7,9 @@ from spotipy.oauth2 import SpotifyOAuth
 
 scope = 'playlist-read-private user-library-read playlist-modify-private'
 
+list_number = 1
+playlistName = "All Songs"
+
 
 def choose_playlist():
     playlists = sp.current_user_playlists()
@@ -41,6 +44,29 @@ def find_playlist_by_name(name):
     return search_playlist
 
 
+# Adds the tracks from the uri list to the list, if the list is full a new list gets created and returned
+def add_tracks_to_list(all_playlist, uris):
+    global list_number
+    try:
+        sp.playlist_add_items(playlist_id=all_playlist['id'], items=uris)
+        uris.clear()
+    except SpotifyException as ex:
+        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        message = template.format(type(ex).__name__, ex.args)
+        print(message)
+        if str(ex.args).__contains__("Playlist size limit reached"):
+            list_number += 1
+            newPlaylistName = playlistName + " " + str(list_number)
+            sp.user_playlist_create(name=newPlaylistName, public=False, user=userid)
+            time.sleep(10)
+            all_playlist = find_playlist_by_name(newPlaylistName)
+            if all_playlist is None:
+                exit("Failure at creating finding new playlist")
+        else:
+            exit("Unexpected SpotifyException")
+    return all_playlist
+
+
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("config.ini")
@@ -55,12 +81,11 @@ if __name__ == '__main__':
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=client_id,
                                                    client_secret=client_secret,
                                                    redirect_uri=SPOTIPY_REDIRECT_URI))
-    saved_albums = sp.current_user_saved_albums()
-    saved_tracks = sp.current_user_saved_tracks()
+    saved_albums = sp.current_user_saved_albums(limit=50)
+    saved_tracks = sp.current_user_saved_tracks(limit=20)
     index = 0
     counter = 0
 
-    list_number = 1
     print("Welcome to SpotifyListify, a tool to fetch all the songs in your library and put them in one list")
     print("By doing so you can for example download the list on your phone without having to download every artist "
           "after another")
@@ -79,11 +104,21 @@ if __name__ == '__main__':
     all_playlist = find_playlist_by_name(playlistName)
     if all_playlist is None:
         exit("Could not create/find a playlist")
+    while saved_tracks:
+        uris: list = []
+        for track in saved_tracks['items']:
+            uris.append(track["track"]["uri"])
+        all_playlist = add_tracks_to_list(all_playlist, uris)
+        if saved_tracks is not None and saved_tracks['next']:
+            saved_tracks = sp.next(saved_tracks)
+        else:
+            saved_tracks = None
+
     while saved_albums:
         uris: list = []
         for i, album in enumerate(saved_albums['items']):
             tracks = sp.album_tracks(album['album']['id'])
-            while (tracks):
+            while tracks:
                 for track in tracks['items']:
                     uris.append(track["uri"])
                 if tracks is not None and tracks['next']:
@@ -92,23 +127,7 @@ if __name__ == '__main__':
                     tracks = None
             print(i + 1, album['album']['id'], album['album']['uri'], album['album']['name'])
             counter += len(uris)
-            try:
-                sp.playlist_add_items(playlist_id=all_playlist['id'], items=uris)
-                uris.clear()
-            except SpotifyException as ex:
-                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                message = template.format(type(ex).__name__, ex.args)
-                print(message)
-                if str(ex.args).__contains__("Playlist size limit reached"):
-                    list_number += 1
-                    newPlaylistName = playlistName + " " + str(list_number)
-                    sp.user_playlist_create(name=newPlaylistName, public=False, user=userid)
-                    time.sleep(10)
-                    all_playlist = find_playlist_by_name(newPlaylistName)
-                    if all_playlist is None:
-                        exit("Failure at creating finding new playlist")
-                else:
-                    exit("Unexpected exception")
+            all_playlist = add_tracks_to_list(all_playlist, uris)
         if saved_albums['next']:
             saved_albums = sp.next(saved_albums)
         else:
