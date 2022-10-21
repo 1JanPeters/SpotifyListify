@@ -9,6 +9,7 @@ scope = 'playlist-read-private user-library-read playlist-modify-private'
 
 list_number = 1
 playlistName = "All Songs"
+counter = 0
 
 
 def choose_playlist():
@@ -47,8 +48,10 @@ def find_playlist_by_name(name):
 # Adds the tracks from the uri list to the list, if the list is full a new list gets created and returned
 def add_tracks_to_list(all_playlist, uris):
     global list_number
+    global counter
     try:
         sp.playlist_add_items(playlist_id=all_playlist['id'], items=uris)
+        counter += len(uris)
         uris.clear()
     except SpotifyException as ex:
         template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -67,6 +70,40 @@ def add_tracks_to_list(all_playlist, uris):
     return all_playlist
 
 
+def add_songs(all_playlist):
+    saved_tracks = sp.current_user_saved_tracks(limit=20)
+    while saved_tracks:
+        uris: list = []
+        for track in saved_tracks['items']:
+            uris.append(track["track"]["uri"])
+        all_playlist = add_tracks_to_list(all_playlist, uris)
+        if saved_tracks is not None and saved_tracks['next']:
+            saved_tracks = sp.next(saved_tracks)
+        else:
+            saved_tracks = None
+
+
+def add_albums(all_playlist):
+    saved_albums = sp.current_user_saved_albums(limit=50)
+    while saved_albums:
+        uris: list = []
+        for i, album in enumerate(saved_albums['items']):
+            tracks = sp.album_tracks(album['album']['id'])
+            while tracks:
+                for track in tracks['items']:
+                    uris.append(track["uri"])
+                if tracks is not None and tracks['next']:
+                    tracks = sp.next(tracks)
+                else:
+                    tracks = None
+            print(i + 1, album['album']['id'], album['album']['uri'], album['album']['name'])
+            all_playlist = add_tracks_to_list(all_playlist, uris)
+        if saved_albums['next']:
+            saved_albums = sp.next(saved_albums)
+        else:
+            saved_albums = None
+
+
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("config.ini")
@@ -81,10 +118,6 @@ if __name__ == '__main__':
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=client_id,
                                                    client_secret=client_secret,
                                                    redirect_uri=SPOTIPY_REDIRECT_URI))
-    saved_albums = sp.current_user_saved_albums(limit=50)
-    saved_tracks = sp.current_user_saved_tracks(limit=20)
-    index = 0
-    counter = 0
 
     print("Welcome to SpotifyListify, a tool to fetch all the songs in your library and put them in one list")
     print("By doing so you can for example download the list on your phone without having to download every artist "
@@ -104,32 +137,7 @@ if __name__ == '__main__':
     all_playlist = find_playlist_by_name(playlistName)
     if all_playlist is None:
         exit("Could not create/find a playlist")
-    while saved_tracks:
-        uris: list = []
-        for track in saved_tracks['items']:
-            uris.append(track["track"]["uri"])
-        all_playlist = add_tracks_to_list(all_playlist, uris)
-        if saved_tracks is not None and saved_tracks['next']:
-            saved_tracks = sp.next(saved_tracks)
-        else:
-            saved_tracks = None
+    add_songs(all_playlist)
+    add_albums(all_playlist)
 
-    while saved_albums:
-        uris: list = []
-        for i, album in enumerate(saved_albums['items']):
-            tracks = sp.album_tracks(album['album']['id'])
-            while tracks:
-                for track in tracks['items']:
-                    uris.append(track["uri"])
-                if tracks is not None and tracks['next']:
-                    tracks = sp.next(tracks)
-                else:
-                    tracks = None
-            print(i + 1, album['album']['id'], album['album']['uri'], album['album']['name'])
-            counter += len(uris)
-            all_playlist = add_tracks_to_list(all_playlist, uris)
-        if saved_albums['next']:
-            saved_albums = sp.next(saved_albums)
-        else:
-            saved_albums = None
     print("Number of songs ", counter)
