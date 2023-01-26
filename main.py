@@ -23,8 +23,8 @@ def choose_playlist():
             print("%4d %s %s" % (i + playlists['offset'], playlist['uri'], playlist['name']))
         playlist_choice = input("n for next, else number of playlist")
         if playlist_choice.isdecimal():
-            if len(playlists) > int(playlist_choice) > -1:
-                name = playlists['items'][int(playlist_choice)]['name']
+            if (len(playlists['items'])+playlists['offset']) > int(playlist_choice) > -1+playlists['offset']:
+                name = playlists['items'][int(playlist_choice)-playlists['offset']]['name']
                 playlists = None
         if playlists is not None and playlists['next']:
             playlists = sp.next(playlists)
@@ -35,16 +35,15 @@ def choose_playlist():
 
 def find_playlist_by_name(name):
     playlists = sp.current_user_playlists()
-    search_playlist = None
     while playlists:
         for i, playlist in enumerate(playlists['items']):
             if playlist['name'] == name:
-                search_playlist = playlist
+                return playlist
         if playlists is not None and playlists['next']:
             playlists = sp.next(playlists)
         else:
             exit("Failure at creating finding playlist " + name)
-    return search_playlist
+    exit("Failure at creating finding playlist " + name)
 
 
 def split_uris_into_chunks(uris, limit=100):
@@ -217,7 +216,7 @@ if __name__ == '__main__':
     created_lists.append(all_playlist['id'])
     if all_playlist is None:
         exit("Could not create/find a playlist")
-    add_playlists()
+    #add_playlists()
     add_songs()
     add_albums()
 
