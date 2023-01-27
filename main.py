@@ -14,6 +14,8 @@ created_lists = []
 all_playlist = None
 userid = None
 
+uris_added: dict = {}
+
 
 def choose_playlist():
     playlists = sp.current_user_playlists()
@@ -23,8 +25,8 @@ def choose_playlist():
             print("%4d %s %s" % (i + playlists['offset'], playlist['uri'], playlist['name']))
         playlist_choice = input("n for next, else number of playlist")
         if playlist_choice.isdecimal():
-            if (len(playlists['items'])+playlists['offset']) > int(playlist_choice) > -1+playlists['offset']:
-                name = playlists['items'][int(playlist_choice)-playlists['offset']]['name']
+            if (len(playlists['items']) + playlists['offset']) > int(playlist_choice) > -1 + playlists['offset']:
+                name = playlists['items'][int(playlist_choice) - playlists['offset']]['name']
                 playlists = None
         if playlists is not None and playlists['next']:
             playlists = sp.next(playlists)
@@ -74,6 +76,7 @@ def handle_spotifyexception(ex, is_error):
 def add_tracks_to_list(uris):
     global list_number, counter, all_playlist
     uris = remove_local_uris(uris)
+    uris = remove_already_added_uris(uris)
     uris_chunks = split_uris_into_chunks(uris, limit=100)
     for uris_chunk in uris_chunks:
         is_error = False
@@ -83,6 +86,7 @@ def add_tracks_to_list(uris):
                 break
             except SpotifyException as ex:
                 handle_spotifyexception(ex, is_error)
+    remember_the_added_uris(uris)
     counter += len(uris)
 
 
@@ -92,6 +96,19 @@ def remove_local_uris(uris):
         if not uri.__contains__('spotify:local'):
             cleaned_uris.append(uri)
     return cleaned_uris
+
+
+def remove_already_added_uris(uris):
+    cleaned_uris = []
+    for uri in uris:
+        if uri not in uris_added:
+            cleaned_uris.append(uri)
+    return cleaned_uris
+
+
+def remember_the_added_uris(uris):
+    for uri in uris:
+        uris_added[uri] = 1
 
 
 def add_songs():
@@ -115,7 +132,7 @@ def playlist_is_created_playlist(playlist_id):
     return False
 
 
-def get_album_tracks(playlist, uris):
+def get_playlist_tracks(playlist, uris):
     tracks = sp.playlist_tracks(playlist['id'])
     while tracks:
         for track in tracks['items']:
@@ -147,7 +164,7 @@ def add_playlists(own_lists=True, subscribed_lists=True):
         for i, playlist in enumerate(saved_playlists['items']):
             if not is_playlist_to_add(playlist, own_lists=own_lists, subscribed_lists=subscribed_lists):
                 continue
-            get_album_tracks(playlist, uris)
+            get_playlist_tracks(playlist, uris)
             print(i + 1, playlist['id'], playlist['uri'], playlist['name'])
             add_tracks_to_list(uris)
         if saved_playlists['next']:
@@ -216,8 +233,8 @@ if __name__ == '__main__':
     created_lists.append(all_playlist['id'])
     if all_playlist is None:
         exit("Could not create/find a playlist")
-    #add_playlists()
+
     add_songs()
     add_albums()
-
+    add_playlists()
     print("Number of songs ", counter)
