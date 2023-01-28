@@ -2,9 +2,9 @@
 
 ## About SpotifyListify
 
-This program uses the Spotify api to find all the songs in your library, including albums(, favorites
-and other playlists: incoming feature) and put them all in one playlist. Due to limitations from Spotify 
-the lists might have a size limit. Because of that another list gets created and filled if the previous one is full.
+This program uses the Spotify api to find all the songs in your library, including albums, favorites
+and other playlists and put them all in one playlist. Due to limitations from Spotify 
+the lists might have a size limit. Because of that another list are created and filled if the previous one is full.
 
 Motivation is that you might want to load all your songs on your phone. Because the current 
 workflow does not allow to download all songs in your library easily it is very time-consuming.
