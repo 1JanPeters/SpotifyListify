@@ -9,6 +9,7 @@ scope = 'playlist-read-private user-library-read playlist-modify-private'
 
 list_number = 1
 playlistName = "All Songs"
+playlistUri = None
 counter = 0
 created_lists = []
 all_playlist = None
@@ -16,23 +17,37 @@ userid = None
 
 uris_added: dict = {}
 
+spacer = "▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮"
+
+
+def select_a_playlist(playlists, user_input):
+    if (len(playlists['items']) + playlists['offset']) > int(user_input) > -1 + playlists['offset']:
+        return playlists['items'][int(user_input) - playlists['offset']]['uri']
+
+
+def get_next_playlists_page(playlists):
+    if playlists['offset'] % len(playlists['items']) == 0:
+        if playlists is not None and playlists['next']:
+            return sp.next(playlists)
+        else:
+            return None
+    else:
+        print('You reached the end')
+        return playlists
+
 
 def choose_playlist():
     playlists = sp.current_user_playlists()
-    name = None
     while playlists:
         for i, playlist in enumerate(playlists['items']):
             print("%4d %s %s" % (i + playlists['offset'], playlist['uri'], playlist['name']))
-        playlist_choice = input("n for next, else number of playlist")
-        if playlist_choice.isdecimal():
-            if (len(playlists['items']) + playlists['offset']) > int(playlist_choice) > -1 + playlists['offset']:
-                name = playlists['items'][int(playlist_choice) - playlists['offset']]['name']
-                playlists = None
-        if playlists is not None and playlists['next']:
-            playlists = sp.next(playlists)
-        else:
-            playlists = None
-    return name
+        user_input = input("Enter number of playlist, n for next page, m for menu\n➤")
+        if user_input.isdecimal():
+            return select_a_playlist(playlists, user_input)
+        if user_input == 'n':
+            playlists = get_next_playlists_page(playlists)
+        if user_input == 'm':
+            return False
 
 
 def find_playlist_by_name(name):
@@ -126,14 +141,14 @@ def add_songs():
 
 
 def playlist_is_created_playlist(playlist_id):
-    for id in created_lists:
-        if id == playlist_id:
+    for created_lists_id in created_lists:
+        if created_lists_id == playlist_id:
             return True
     return False
 
 
 def get_playlist_tracks(playlist, uris):
-    tracks = sp.playlist_tracks(playlist['id'])
+    tracks = sp.playlist_items(playlist['id'], additional_types=('track',))
     while tracks:
         for track in tracks['items']:
             uris.append(track['track']['uri'])
@@ -213,28 +228,75 @@ if __name__ == '__main__':
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=client_id,
                                                    client_secret=client_secret,
                                                    redirect_uri=SPOTIPY_REDIRECT_URI))
-
-    print("Welcome to SpotifyListify, a tool to fetch all the songs in your library and put them in one list")
-    print("By doing so you can for example download the list on your phone without having to download every artist "
-          "after another")
-    print("Enter:\n"
-          "1 To select a playlist from your account\n"
-          "2 to create a new name")
     choice = ""
     while (not choice.isdecimal()) or (choice != "1" and choice != "2"):
-        choice = input(">")
-    if choice == "1":
-        playlistName = choose_playlist()
-    if choice == "2":
-        playlistName = input("New playlist name:>")
-        sp.user_playlist_create(name=playlistName, public=False, user=userid)
+        print(spacer)
+        print("Welcome to SpotifyListify, a tool to fetch all the songs in your library and put them in one list")
+        print("By doing so you can for example download the list on your phone without having to download every artist "
+              "after another")
+        print("Enter:\n"
+              "1 To select a playlist from your account\n"
+              "2 to create a new name\n")
+        choice = input("➤")
+        if choice == "1":
+            playlistUri = choose_playlist()
+            if playlistName is False:
+                choice = '-1'
+            all_playlist = sp.playlist(playlist_id=playlistUri)
+        if choice == "2":
+            playlistName = input("➤New playlist name: ")
+            sp.user_playlist_create(name=playlistName, public=False, user=userid)
+            all_playlist = find_playlist_by_name(playlistName)
 
-    all_playlist = find_playlist_by_name(playlistName)
     created_lists.append(all_playlist['id'])
     if all_playlist is None:
         exit("Could not create/find a playlist")
 
-    add_songs()
-    add_albums()
-    add_playlists()
+    choice = ''
+    is_addsongs = False
+    is_addalbums = False
+    is_addplaylists = False
+    is_own_lists = False
+    is_sub_lists = False
+    while choice != "y":
+        print(spacer)
+        print('Current settings: Add Songs: %s, Add Albums: %s, Add Playlists: %s' % (is_addsongs, is_addalbums,
+                                                                                      is_addplaylists))
+        print("Enter:\n"
+              "1 To toggle favorite songs\n"
+              "2 To toggle liked albums\n"
+              "3 To toggle playlists\n"
+              "y to confirm or e to exit")
+        choice = input("➤")
+        if choice == '1':
+            is_addsongs = not is_addsongs
+        elif choice == '2':
+            is_addalbums = not is_addalbums
+        elif choice == '3':
+            is_addplaylists = not is_addplaylists
+        elif choice == 'e':
+            exit(0)
+
+    if is_addplaylists:
+        choice = ''
+        while choice != "y":
+            print(spacer)
+            print('Current settings: Own Playlists: %s, Subscribed Playlists: %s' % (is_own_lists, is_sub_lists))
+            print("Enter:\n"
+                  "1 To toggle Own Playlists\n"
+                  "2 To toggle Subscribed Playlists\n"
+                  "y to confirm or e to exit")
+            choice = input("➤")
+            if choice == '1':
+                is_own_lists = not is_own_lists
+            elif choice == '2':
+                is_sub_lists = not is_sub_lists
+            elif choice == 'e':
+                exit(0)
+    if is_addsongs:
+        add_songs()
+    if is_addalbums:
+        add_albums()
+    if is_addplaylists:
+        add_playlists(own_lists=is_own_lists, subscribed_lists=is_sub_lists)
     print("Number of songs ", counter)
