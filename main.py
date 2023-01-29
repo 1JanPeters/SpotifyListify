@@ -17,7 +17,8 @@ userid = None
 
 uris_added: dict = {}
 
-spacer="▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮"
+spacer = "▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮"
+
 
 def select_a_playlist(playlists, user_input):
     if (len(playlists['items']) + playlists['offset']) > int(user_input) > -1 + playlists['offset']:
@@ -140,14 +141,14 @@ def add_songs():
 
 
 def playlist_is_created_playlist(playlist_id):
-    for id in created_lists:
-        if id == playlist_id:
+    for created_lists_id in created_lists:
+        if created_lists_id == playlist_id:
             return True
     return False
 
 
 def get_playlist_tracks(playlist, uris):
-    tracks = sp.playlist_tracks(playlist['id'])
+    tracks = sp.playlist_items(playlist['id'], additional_types=('track',))
     while tracks:
         for track in tracks['items']:
             uris.append(track['track']['uri'])
