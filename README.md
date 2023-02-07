@@ -25,3 +25,5 @@ supported by Spotify.
   you can right-click and copy the link, then you should have a link like: 
   https://open.spotify.com/user/userid?si=...&nd=1 for browser its just https://open.spotify.com/user/userid
 - You can leave the SPOTIPY_REDIRECT_URI as it is if you want to run SpotifyListify locally.
+
+Please note that the use of the project is at your own risk, because even if the developer community had no problems using it, we cannot guarantee that there will be no unforeseeable errors in its execution!
